@@ -385,6 +385,110 @@
     color: var(--ink-faint);
     text-align: center;
   }
+
+  /* ── photo upload ── */
+  .photo-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .photo-label {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.78rem;
+    color: var(--ink-light);
+    cursor: pointer;
+    padding: 0.4rem 0.85rem;
+    border: 1px dashed var(--border);
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .photo-label:hover { border-color: var(--gold); color: var(--gold); }
+
+  #photo-input { display: none; }
+
+  .photo-preview {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .photo-thumb {
+    position: relative;
+    width: 56px;
+    height: 56px;
+  }
+
+  .photo-thumb img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+  }
+
+  .photo-thumb-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .photo-uploading {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+  }
+
+  /* ── detail photos ── */
+  .detail-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .detail-photos img {
+    width: 100%;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .detail-photos img:hover { opacity: 0.85; }
+
+  /* ── lightbox ── */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,24,20,0.92);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .lightbox.show { display: flex; }
+  .lightbox img {
+    max-width: 92vw;
+    max-height: 92vh;
+    object-fit: contain;
+    border-radius: 2px;
+  }
 </style>
 </head>
 <body>
@@ -459,6 +563,12 @@
       </div>
     </header>
     <input type="text" id="title-input" placeholder="タイトル">
+    <div class="photo-bar">
+      <label class="photo-label" for="photo-input">＋ 写真を追加</label>
+      <input type="file" id="photo-input" accept="image/*" multiple onchange="handlePhotoSelect(event)">
+      <div class="photo-preview" id="photo-preview"></div>
+      <span class="photo-uploading" id="photo-uploading"></span>
+    </div>
     <textarea id="body-input" placeholder="今日のこと…"></textarea>
     <div id="editor-status" class="status"></div>
   </div>
@@ -482,12 +592,18 @@
       <div class="detail-date" id="detail-date"></div>
       <div class="detail-title" id="detail-title"></div>
     </div>
+    <div class="detail-photos" id="detail-photos"></div>
     <div class="detail-body" id="detail-body"></div>
     <div id="detail-status" class="status"></div>
     <div style="margin-top:3rem; border-top:1px solid var(--border); padding-top:1.25rem;">
       <button class="btn btn-sm" onclick="showList()">← 一覧へ</button>
     </div>
   </div>
+</div>
+
+<!-- ── lightbox ── -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
 </div>
 
 <!-- ── settings overlay ── -->
@@ -521,6 +637,7 @@ const API = 'https://api.github.com';
 let cfg = {};
 let entries = [];
 let currentFile = null;
+let pendingPhotos = []; // {file, dataUrl, name}
 
 function loadCfg() {
   try { cfg = JSON.parse(localStorage.getItem('nikki_cfg') || '{}'); } catch(e) { cfg = {}; }
@@ -588,18 +705,102 @@ function parseEntry(file, content) {
     const [k,...v] = line.split(':');
     if (k) front[k.trim()] = v.join(':').trim().replace(/^"|"$/g,'');
   });
+  // images フィールドをパース（カンマ区切り）
+  const imagesRaw = front.images || '';
+  const images = imagesRaw ? imagesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
   return {
     file,
     title: front.title || '（無題）',
     date: front.date || '',
+    images,
     body: m[2].trim()
   };
 }
 
-function buildMarkdown(date, title, body) {
-  const content = `---\nlayout: post\ntitle: "${title}"\ndate: ${date}\n---\n\n${body}`;
+function buildMarkdown(date, title, body, imagePaths) {
+  const imgLine = imagePaths.length ? `\nimages: ${imagePaths.join(', ')}` : '';
+  const content = `---\nlayout: post\ntitle: "${title}"\ndate: ${date}${imgLine}\n---\n\n${body}`;
   return btoa(unescape(encodeURIComponent(content)));
 }
+
+// ── photo handling ──
+
+function handlePhotoSelect(event) {
+  const files = Array.from(event.target.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      const name = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      pendingPhotos.push({ file, dataUrl, name });
+      renderPhotoPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = '';
+}
+
+function renderPhotoPreview() {
+  const preview = document.getElementById('photo-preview');
+  preview.innerHTML = pendingPhotos.map((p, i) => `
+    <div class="photo-thumb">
+      <img src="${p.dataUrl}" alt="">
+      <button class="photo-thumb-remove" onclick="removePhoto(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function removePhoto(idx) {
+  pendingPhotos.splice(idx, 1);
+  renderPhotoPreview();
+}
+
+async function uploadPhotos(date) {
+  if (!pendingPhotos.length) return [];
+  const ul = document.getElementById('photo-uploading');
+  const paths = [];
+  for (let i = 0; i < pendingPhotos.length; i++) {
+    const p = pendingPhotos[i];
+    ul.textContent = `写真をアップロード中… (${i+1}/${pendingPhotos.length})`;
+    const base64 = p.dataUrl.split(',')[1];
+    const path = `images/${date}/${p.name}`;
+    try {
+      let sha;
+      try {
+        const existing = await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${path}`);
+        sha = existing.sha;
+      } catch(e) {}
+      await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          message: `Add photo: ${p.name}`,
+          content: base64,
+          ...(sha ? { sha } : {})
+        })
+      });
+      paths.push(path);
+    } catch(e) {
+      console.error('Upload failed:', e);
+    }
+  }
+  ul.textContent = '';
+  return paths;
+}
+
+function imageUrl(path) {
+  return `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/${path}`;
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('show');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+}
+
+// ── entries ──
 
 async function loadEntries() {
   status('list-status', '読み込んでいます…', 'loading');
@@ -637,7 +838,7 @@ function renderList() {
     <li class="entry-item" onclick="showDetail(${i})">
       <div class="entry-date">${displayDate(e.date)}</div>
       <div class="entry-meta">
-        <div class="entry-title">${e.title}</div>
+        <div class="entry-title">${e.title}${e.images.length ? ' <span style="color:var(--ink-faint);font-size:0.75rem;">📷 '+e.images.length+'</span>' : ''}</div>
         <div class="entry-excerpt">${e.body.slice(0,60).replace(/\n/g,' ')}</div>
       </div>
     </li>
@@ -651,9 +852,12 @@ function showList() {
 
 function newEntry() {
   currentFile = null;
+  pendingPhotos = [];
   document.getElementById('editor-date').value = todayStr();
   document.getElementById('title-input').value = '';
   document.getElementById('body-input').value = '';
+  document.getElementById('photo-preview').innerHTML = '';
+  document.getElementById('photo-uploading').textContent = '';
   clearStatus('editor-status');
   show('screen-editor');
   setTimeout(() => document.getElementById('title-input').focus(), 100);
@@ -663,9 +867,21 @@ function editCurrent() {
   if (!currentFile) return;
   const e = entries.find(x => x.file === currentFile);
   if (!e) return;
+  pendingPhotos = [];
   document.getElementById('editor-date').value = e.date;
   document.getElementById('title-input').value = e.title;
   document.getElementById('body-input').value = e.body;
+  document.getElementById('photo-preview').innerHTML = '';
+  document.getElementById('photo-uploading').textContent = '';
+  // 既存の画像はサムネイルとして表示（再アップはしない）
+  if (e.images.length) {
+    const preview = document.getElementById('photo-preview');
+    preview.innerHTML = e.images.map(p => `
+      <div class="photo-thumb">
+        <img src="${imageUrl(p)}" alt="" onerror="this.style.opacity=0.3">
+      </div>
+    `).join('') + '<span style="font-family:sans-serif;font-size:0.72rem;color:var(--ink-faint);align-self:center;">既存の写真</span>';
+  }
   clearStatus('editor-status');
   show('screen-editor');
 }
@@ -674,11 +890,23 @@ async function saveEntry() {
   const date = document.getElementById('editor-date').value || todayStr();
   const title = document.getElementById('title-input').value.trim() || '（無題）';
   const body = document.getElementById('body-input').value;
-  const content = buildMarkdown(date, title, body);
   const path = currentFile || fileNameFromDate(date, title);
 
   status('editor-status', '保存しています…', 'loading');
   try {
+    // 既存エントリの画像パスを引き継ぐ
+    let existingImages = [];
+    if (currentFile) {
+      const e = entries.find(x => x.file === currentFile);
+      if (e) existingImages = e.images;
+    }
+
+    // 新規写真をアップロード
+    const newImagePaths = await uploadPhotos(date);
+    const allImages = [...existingImages, ...newImagePaths];
+
+    const content = buildMarkdown(date, title, body, allImages);
+
     let sha;
     try {
       const existing = await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${path}`);
@@ -706,6 +934,20 @@ function showDetail(idx) {
   document.getElementById('detail-date').textContent = displayDate(e.date);
   document.getElementById('detail-title').textContent = e.title;
   document.getElementById('detail-body').textContent = e.body;
+
+  // 写真を表示
+  const photosEl = document.getElementById('detail-photos');
+  if (e.images.length) {
+    photosEl.innerHTML = e.images.map(p => {
+      const url = imageUrl(p);
+      return `<img src="${url}" alt="" loading="lazy" onclick="openLightbox('${url}')" onerror="this.style.display='none'">`;
+    }).join('');
+    photosEl.style.display = 'grid';
+  } else {
+    photosEl.innerHTML = '';
+    photosEl.style.display = 'none';
+  }
+
   clearStatus('detail-status');
   show('screen-detail');
 }
