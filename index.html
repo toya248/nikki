@@ -531,7 +531,7 @@
   <div class="shell">
     <header>
       <div class="header-inner">
-        <div class="site-title">toya's note<span>s</span></div>
+        <div class="site-title">nikki<span>.</span></div>
         <div class="header-actions">
           <button class="btn btn-sm" onclick="showSettings()">設定</button>
         </div>
@@ -692,7 +692,9 @@ function fileNameFromDate(date, title) {
   const slug = title
     .replace(/[^\w\u3040-\u30ff\u4e00-\u9fff]/g, '-')
     .replace(/-+/g,'-').slice(0,40);
-  return `_posts/${date}-${slug || 'untitled'}.md`;
+  const now = new Date();
+  const t = now.toTimeString().slice(0,8).replace(/:/g,'');
+  return `_posts/${date}T${t}-${slug || 'untitled'}.md`;
 }
 
 function parseEntry(file, content) {
@@ -812,7 +814,7 @@ async function loadEntries() {
         .then(d => parseEntry(f.path, d.content))
         .catch(() => null))
     );
-    entries = loaded.filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+    entries = loaded.filter(Boolean).sort((a,b) => b.file.localeCompare(a.file));
     renderList();
     clearStatus('list-status');
   } catch(e) {
