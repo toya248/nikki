@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nikki</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1814;
+    --ink-light: #6b6660;
+    --ink-faint: #b8b2ab;
+    --paper: #faf8f4;
+    --paper-dark: #f0ede6;
+    --gold: #c4963c;
+    --gold-light: #e8d5a3;
+    --border: #ddd8cf;
+    --danger: #b85c4a;
+  }
+
+  body {
+    font-family: 'Noto Serif JP', serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.8;
+  }
+
+  /* ── layout ── */
+  .shell {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 0 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .site-title {
+    font-size: 1.75rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--ink);
+  }
+
+  .site-title span {
+    color: var(--gold);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  /* ── buttons ── */
+  .btn {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 400;
+    padding: 0.45rem 1rem;
+    border-radius: 2px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink-light);
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn:hover { background: var(--paper-dark); color: var(--ink); border-color: var(--ink-faint); }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .btn-primary:hover { background: #2e2b26; }
+
+  .btn-gold {
+    background: var(--gold);
+    color: #fff;
+    border-color: var(--gold);
+  }
+  .btn-gold:hover { background: #b08530; }
+
+  .btn-danger { color: var(--danger); border-color: #e8ccc8; }
+  .btn-danger:hover { background: #fdf5f4; border-color: var(--danger); }
+
+  .btn-sm { font-size: 0.75rem; padding: 0.3rem 0.7rem; }
+
+  /* ── screens ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── setup screen ── */
+  .setup-card {
+    max-width: 480px;
+    margin: 4rem auto;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2.5rem 2rem;
+  }
+
+  .setup-card h2 {
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin-bottom: 0.5rem;
+  }
+
+  .setup-card p {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink-light);
+    margin-bottom: 1.75rem;
+    line-height: 1.7;
+  }
+
+  .setup-card a { color: var(--gold); }
+
+  .field { margin-bottom: 1.25rem; }
+
+  label {
+    display: block;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.78rem;
+    color: var(--ink-light);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.04em;
+  }
+
+  input[type="text"], input[type="password"], textarea, select {
+    width: 100%;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+    transition: border-color 0.15s;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--gold);
+  }
+
+  /* ── list screen ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+    gap: 1rem;
+  }
+
+  .entry-count {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+  }
+
+  .entries { list-style: none; }
+
+  .entry-item {
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 0;
+    display: flex;
+    align-items: baseline;
+    gap: 1.25rem;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .entry-item:first-child { border-top: 1px solid var(--border); }
+  .entry-item:hover { padding-left: 0.5rem; }
+
+  .entry-date {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    white-space: nowrap;
+    min-width: 100px;
+  }
+
+  .entry-title {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--ink);
+  }
+
+  .entry-excerpt {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.8rem;
+    color: var(--ink-light);
+    margin-top: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+  }
+
+  .entry-meta { flex: 1; min-width: 0; }
+
+  /* ── editor screen ── */
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+    gap: 1rem;
+  }
+
+  .editor-actions { display: flex; gap: 0.5rem; }
+
+  .date-input {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+  }
+
+  #title-input {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.5rem;
+    font-weight: 300;
+    width: 100%;
+    padding: 0.75rem 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink);
+    margin-bottom: 1.5rem;
+    outline: none;
+    letter-spacing: 0.05em;
+  }
+
+  #title-input::placeholder { color: var(--ink-faint); }
+
+  #body-input {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1rem;
+    font-weight: 300;
+    width: 100%;
+    min-height: 420px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    resize: none;
+    outline: none;
+    line-height: 1.9;
+  }
+
+  #body-input::placeholder { color: var(--ink-faint); }
+
+  /* ── detail screen ── */
+  .detail-header {
+    margin-bottom: 2.5rem;
+  }
+
+  .detail-date {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.08em;
+  }
+
+  .detail-title {
+    font-size: 1.75rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+  }
+
+  .detail-body {
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 2;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .detail-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    justify-content: flex-end;
+  }
+
+  /* ── status / loading ── */
+  .status {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.78rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 2px;
+    margin-top: 1rem;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.ok { background: #f0f8f0; color: #3a6a3a; border: 1px solid #c8e0c8; }
+  .status.err { background: #fdf5f4; color: var(--danger); border: 1px solid #e8ccc8; }
+  .status.loading { background: var(--paper-dark); color: var(--ink-light); border: 1px solid var(--border); }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 0;
+    color: var(--ink-faint);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.85rem;
+  }
+
+  .empty-state p { margin-bottom: 1.25rem; }
+
+  /* ── settings modal ── */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,24,20,0.4);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .overlay.show { display: flex; }
+
+  .modal {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 440px;
+  }
+
+  .modal h3 {
+    font-size: 1rem;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.05em;
+  }
+
+  .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 4rem;
+    padding: 1.5rem 0;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── setup screen ── -->
+<div id="screen-setup" class="screen active">
+  <div class="shell">
+    <header>
+      <div class="header-inner">
+        <div class="site-title">nikki<span>.</span></div>
+      </div>
+    </header>
+    <div class="setup-card">
+      <h2>はじめに設定が必要です</h2>
+      <p>
+        GitHubにある日記ファイルを読み書きするために、Personal Access Token が必要です。<br>
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=nikki" target="_blank">こちらから発行</a>できます（scopeは <code>repo</code> にチェック）。<br>
+        トークンはこのブラウザにのみ保存されます。
+      </p>
+      <div class="field">
+        <label>GitHubユーザー名</label>
+        <input type="text" id="setup-owner" placeholder="例: toya248" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>リポジトリ名</label>
+        <input type="text" id="setup-repo" placeholder="例: nikki" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Personal Access Token</label>
+        <input type="password" id="setup-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="saveSetup()" style="width:100%; padding: 0.65rem;">保存して始める</button>
+      <div id="setup-status" class="status"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── list screen ── -->
+<div id="screen-list" class="screen">
+  <div class="shell">
+    <header>
+      <div class="header-inner">
+        <div class="site-title">nikki<span>.</span></div>
+        <div class="header-actions">
+          <button class="btn btn-sm" onclick="showSettings()">設定</button>
+        </div>
+      </div>
+    </header>
+    <div class="toolbar">
+      <div class="entry-count" id="entry-count"></div>
+      <button class="btn btn-gold" onclick="newEntry()">＋ 新しい日記</button>
+    </div>
+    <div id="list-status" class="status"></div>
+    <ul class="entries" id="entries-list"></ul>
+  </div>
+  <footer>nikki — powered by GitHub</footer>
+</div>
+
+<!-- ── editor screen ── -->
+<div id="screen-editor" class="screen">
+  <div class="shell">
+    <header>
+      <div class="header-inner">
+        <div class="site-title" style="cursor:pointer" onclick="showList()">nikki<span>.</span></div>
+        <div class="header-actions">
+          <input type="date" class="date-input" id="editor-date">
+          <div class="editor-actions">
+            <button class="btn btn-sm" onclick="showList()">キャンセル</button>
+            <button class="btn btn-gold btn-sm" onclick="saveEntry()">保存</button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <input type="text" id="title-input" placeholder="タイトル">
+    <textarea id="body-input" placeholder="今日のこと…"></textarea>
+    <div id="editor-status" class="status"></div>
+  </div>
+</div>
+
+<!-- ── detail screen ── -->
+<div id="screen-detail" class="screen">
+  <div class="shell">
+    <header>
+      <div class="header-inner">
+        <div class="site-title" style="cursor:pointer" onclick="showList()">nikki<span>.</span></div>
+        <div class="header-actions">
+          <div class="detail-actions" style="margin-bottom:0">
+            <button class="btn btn-sm" onclick="editCurrent()">編集</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteCurrent()">削除</button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="detail-header">
+      <div class="detail-date" id="detail-date"></div>
+      <div class="detail-title" id="detail-title"></div>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+    <div id="detail-status" class="status"></div>
+    <div style="margin-top:3rem; border-top:1px solid var(--border); padding-top:1.25rem;">
+      <button class="btn btn-sm" onclick="showList()">← 一覧へ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── settings overlay ── -->
+<div class="overlay" id="overlay-settings">
+  <div class="modal">
+    <h3>設定</h3>
+    <div class="field">
+      <label>GitHubユーザー名</label>
+      <input type="text" id="cfg-owner">
+    </div>
+    <div class="field">
+      <label>リポジトリ名</label>
+      <input type="text" id="cfg-repo">
+    </div>
+    <div class="field">
+      <label>Personal Access Token</label>
+      <input type="password" id="cfg-token">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="closeSettings()">キャンセル</button>
+      <button class="btn btn-gold btn-sm" onclick="updateSettings()">保存</button>
+    </div>
+    <div style="margin-top:1.25rem; border-top:1px solid var(--border); padding-top:1.25rem;">
+      <button class="btn btn-sm btn-danger" onclick="resetAll()">すべての設定を削除してやり直す</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://api.github.com';
+let cfg = {};
+let entries = [];
+let currentFile = null;
+
+function loadCfg() {
+  try { cfg = JSON.parse(localStorage.getItem('nikki_cfg') || '{}'); } catch(e) { cfg = {}; }
+}
+
+function saveCfg() {
+  localStorage.setItem('nikki_cfg', JSON.stringify(cfg));
+}
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function status(id, msg, type) {
+  const el = document.getElementById(id);
+  el.className = 'status show ' + type;
+  el.innerHTML = type === 'loading' ? `<span class="spinner"></span>${msg}` : msg;
+}
+
+function clearStatus(id) {
+  const el = document.getElementById(id);
+  el.className = 'status';
+}
+
+async function ghFetch(path, opts = {}) {
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: {
+      'Authorization': `token ${cfg.token}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      ...(opts.headers || {})
+    }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || res.statusText);
+  return data;
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function displayDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
+}
+
+function fileNameFromDate(date, title) {
+  const slug = title
+    .replace(/[^\w\u3040-\u30ff\u4e00-\u9fff]/g, '-')
+    .replace(/-+/g,'-').slice(0,40);
+  return `_posts/${date}-${slug || 'untitled'}.md`;
+}
+
+function parseEntry(file, content) {
+  const raw = atob(content);
+  const decoded = decodeURIComponent(escape(raw));
+  const m = decoded.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (!m) return null;
+  const front = {};
+  m[1].split('\n').forEach(line => {
+    const [k,...v] = line.split(':');
+    if (k) front[k.trim()] = v.join(':').trim().replace(/^"|"$/g,'');
+  });
+  return {
+    file,
+    title: front.title || '（無題）',
+    date: front.date || '',
+    body: m[2].trim()
+  };
+}
+
+function buildMarkdown(date, title, body) {
+  const content = `---\nlayout: post\ntitle: "${title}"\ndate: ${date}\n---\n\n${body}`;
+  return btoa(unescape(encodeURIComponent(content)));
+}
+
+async function loadEntries() {
+  status('list-status', '読み込んでいます…', 'loading');
+  try {
+    const files = await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/_posts`);
+    const mdFiles = files.filter(f => f.name.endsWith('.md'));
+    const loaded = await Promise.all(
+      mdFiles.map(f => ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${f.path}`)
+        .then(d => parseEntry(f.path, d.content))
+        .catch(() => null))
+    );
+    entries = loaded.filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+    renderList();
+    clearStatus('list-status');
+  } catch(e) {
+    if (e.message && e.message.includes('This repository is empty')) {
+      entries = [];
+      renderList();
+      clearStatus('list-status');
+    } else {
+      status('list-status', `読み込みエラー: ${e.message}`, 'err');
+    }
+  }
+}
+
+function renderList() {
+  const ul = document.getElementById('entries-list');
+  const count = document.getElementById('entry-count');
+  count.textContent = entries.length ? `${entries.length} 件` : '';
+  if (!entries.length) {
+    ul.innerHTML = '<div class="empty-state"><p>まだ日記がありません。</p><p>「＋ 新しい日記」から書いてみましょう。</p></div>';
+    return;
+  }
+  ul.innerHTML = entries.map((e,i) => `
+    <li class="entry-item" onclick="showDetail(${i})">
+      <div class="entry-date">${displayDate(e.date)}</div>
+      <div class="entry-meta">
+        <div class="entry-title">${e.title}</div>
+        <div class="entry-excerpt">${e.body.slice(0,60).replace(/\n/g,' ')}</div>
+      </div>
+    </li>
+  `).join('');
+}
+
+function showList() {
+  show('screen-list');
+  loadEntries();
+}
+
+function newEntry() {
+  currentFile = null;
+  document.getElementById('editor-date').value = todayStr();
+  document.getElementById('title-input').value = '';
+  document.getElementById('body-input').value = '';
+  clearStatus('editor-status');
+  show('screen-editor');
+  setTimeout(() => document.getElementById('title-input').focus(), 100);
+}
+
+function editCurrent() {
+  if (!currentFile) return;
+  const e = entries.find(x => x.file === currentFile);
+  if (!e) return;
+  document.getElementById('editor-date').value = e.date;
+  document.getElementById('title-input').value = e.title;
+  document.getElementById('body-input').value = e.body;
+  clearStatus('editor-status');
+  show('screen-editor');
+}
+
+async function saveEntry() {
+  const date = document.getElementById('editor-date').value || todayStr();
+  const title = document.getElementById('title-input').value.trim() || '（無題）';
+  const body = document.getElementById('body-input').value;
+  const content = buildMarkdown(date, title, body);
+  const path = currentFile || fileNameFromDate(date, title);
+
+  status('editor-status', '保存しています…', 'loading');
+  try {
+    let sha;
+    try {
+      const existing = await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${path}`);
+      sha = existing.sha;
+    } catch(e) {}
+
+    await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        message: sha ? `Update: ${title}` : `Add: ${title}`,
+        content,
+        ...(sha ? { sha } : {})
+      })
+    });
+    status('editor-status', '保存しました', 'ok');
+    setTimeout(() => showList(), 800);
+  } catch(e) {
+    status('editor-status', `保存に失敗しました: ${e.message}`, 'err');
+  }
+}
+
+function showDetail(idx) {
+  const e = entries[idx];
+  currentFile = e.file;
+  document.getElementById('detail-date').textContent = displayDate(e.date);
+  document.getElementById('detail-title').textContent = e.title;
+  document.getElementById('detail-body').textContent = e.body;
+  clearStatus('detail-status');
+  show('screen-detail');
+}
+
+async function deleteCurrent() {
+  if (!currentFile || !confirm('この日記を削除しますか？')) return;
+  status('detail-status', '削除しています…', 'loading');
+  try {
+    const file = await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${currentFile}`);
+    await ghFetch(`/repos/${cfg.owner}/${cfg.repo}/contents/${currentFile}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ message: 'Delete entry', sha: file.sha })
+    });
+    showList();
+  } catch(e) {
+    status('detail-status', `削除に失敗しました: ${e.message}`, 'err');
+  }
+}
+
+async function saveSetup() {
+  const owner = document.getElementById('setup-owner').value.trim();
+  const repo = document.getElementById('setup-repo').value.trim();
+  const token = document.getElementById('setup-token').value.trim();
+  if (!owner || !repo || !token) {
+    status('setup-status', 'すべての項目を入力してください', 'err');
+    return;
+  }
+  status('setup-status', '確認しています…', 'loading');
+  cfg = { owner, repo, token };
+  try {
+    await ghFetch(`/repos/${owner}/${repo}`);
+    saveCfg();
+    clearStatus('setup-status');
+    showList();
+  } catch(e) {
+    status('setup-status', `接続に失敗しました: ${e.message}`, 'err');
+  }
+}
+
+function showSettings() {
+  document.getElementById('cfg-owner').value = cfg.owner || '';
+  document.getElementById('cfg-repo').value = cfg.repo || '';
+  document.getElementById('cfg-token').value = cfg.token || '';
+  document.getElementById('overlay-settings').classList.add('show');
+}
+
+function closeSettings() {
+  document.getElementById('overlay-settings').classList.remove('show');
+}
+
+async function updateSettings() {
+  const owner = document.getElementById('cfg-owner').value.trim();
+  const repo = document.getElementById('cfg-repo').value.trim();
+  const token = document.getElementById('cfg-token').value.trim();
+  cfg = { owner, repo, token };
+  saveCfg();
+  closeSettings();
+  showList();
+}
+
+function resetAll() {
+  if (!confirm('設定をすべて削除しますか？')) return;
+  localStorage.removeItem('nikki_cfg');
+  cfg = {};
+  show('screen-setup');
+}
+
+// init
+loadCfg();
+if (cfg.owner && cfg.repo && cfg.token) {
+  showList();
+}
+</script>
+</body>
+</html>
